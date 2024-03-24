@@ -30,4 +30,4 @@ In conclusion, weather forecasting using Python offers a practical application o
 
 ## References
 
-- [Kaggle Dataset: Daily Weather Data of New Delhi]([link-to-dataset](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data))
+- [Kaggle Dataset: Daily Weather Data of New Delhi](./[link-to-dataset](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data))
