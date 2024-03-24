@@ -18,7 +18,7 @@ In this repository, you'll find a variety of projects that showcase the applicat
 Here's a brief overview of the projects included in this repository:
 
 1. [Python-Based Analysis of IPL](./project1_folder): Discover insights into IPL cricket with Python! This data science project delves into analyzing the performance of the eight competing IPL teams, employing Plotly for efficient visualizations. Uncover team trends and player profiles for strategic match selections.
-2. [Python-based Weather Prediction](./project2_folder): Weather forecasting with Python involves using historical weather data and Time Series Forecasting techniques to predict future weather conditions. 
+2. [Python-based Weather Prediction](./[(https://github.com/Shrvaani/DataPyHub/blob/Python_Based_Weather_Prediction)]): Weather forecasting with Python involves using historical weather data and Time Series Forecasting techniques to predict future weather conditions. 
 
 Each project folder contains its own README.md file with detailed information about the project, including its objectives, methodologies, datasets used, and implementation details.
 
