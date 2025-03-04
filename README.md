@@ -1,7 +1,5 @@
 # Instagram Data Analysis and Prediction
 
-Welcome to the DataPyHub! This repository contains a collection of projects related to data science and visualization using Python. Each project focuses on data analysis, machine learning, and visualization techniques.
-
 ## Overview
 
 This project analyzes Instagram data using Python. It includes data visualization, text analysis (WordCloud), and machine learning-based engagement prediction using a Passive Aggressive Regressor.
