@@ -1,6 +1,6 @@
 # Data Science and Visualization Projects
 
-Welcome to the DataPyHub! This repository contains a collection of projects related to data science and visualization using Python. Each project focuses on different aspects of data analysis, machine learning, and data visualization techniques.
+Welcome to the DataPyHub! This repository contains a collection of projects related to data science and visualization using Python. Each project focuses on data analysis, machine learning, and visualization techniques.
 
 ## Table of Contents
 
