@@ -30,7 +30,7 @@ The dataset used is Instagram.csv, which contains:
 
 1. Clone the repository or download the script.
 2. Ensure Instagram.csv is in the correct directory.
-3. Run the script using: python instagram_analysis.py
+3. Run the script using: **python instagram_analysis.py**
 4. Follow the visualizations and predictions.
 
 ## Output
