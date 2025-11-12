@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Model artifacts
+model.pkl
+
+# Data files
+data/
+!data/.gitkeep  # keep the empty folder in repo
+
+# Environment
+.env
+*.DS_Store
+
+# Streamlit cache
+.streamlit/
