@@ -15,3 +15,9 @@ data/
 
 # Streamlit cache
 .streamlit/
+
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
