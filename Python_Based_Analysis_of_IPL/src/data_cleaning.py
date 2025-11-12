@@ -2,90 +2,91 @@ import pandas as pd
 import os
 
 def clean_data():
-    # ✅ File paths
-    ball_path = 'data/raw/IPL_Ball_by_Ball_2008_2024.csv'
-    match_path = 'data/raw/IPL_Matches_2008_2024.csv'
+    # File paths
+    matches_path = "data/raw/IPL_Matches_2008_2024.csv"
+    deliveries_path = "data/raw/IPL_Ball_by_Ball_2008_2024.csv"
+    output_path = "data/processed/cleaned_ipl.csv"
 
-    # ✅ Load datasets
-    deliveries = pd.read_csv(ball_path, low_memory=False)
-    matches = pd.read_csv(match_path, low_memory=False)
+    # ---------------------------------------------------
+    # 🧾 Load datasets
+    # ---------------------------------------------------
+    print("📥 Loading datasets...")
+    matches = pd.read_csv(matches_path, low_memory=False)
+    deliveries = pd.read_csv(deliveries_path, low_memory=False)
 
-    # ✅ Normalize column names
-    deliveries.columns = deliveries.columns.str.strip().str.lower()
-    matches.columns = matches.columns.str.strip().str.lower()
+    # ---------------------------------------------------
+    # 🔧 Standardize column names
+    # ---------------------------------------------------
+    matches.columns = matches.columns.str.strip().str.lower().str.replace(" ", "_")
+    deliveries.columns = deliveries.columns.str.strip().str.lower().str.replace(" ", "_")
 
-    # ✅ Rename columns for consistency
-    if 'matchid' in deliveries.columns:
-        deliveries.rename(columns={'matchid': 'match_id'}, inplace=True)
-    if 'matchid' in matches.columns:
-        matches.rename(columns={'matchid': 'id'}, inplace=True)
+    # Ensure matchId consistency
+    if "matchid" not in matches.columns:
+        matches.rename(columns={"id": "matchid"}, inplace=True)
+    if "matchid" not in deliveries.columns:
+        raise ValueError("⚠️ Missing 'matchId' column in deliveries file.")
 
-    # ✅ Handle dates safely
-    date_col = None
-    for col in ['date', 'date1', 'date2']:
-        if col in matches.columns:
-            matches[col] = pd.to_datetime(matches[col], errors='coerce')
-            date_col = col
-            break
+    # ---------------------------------------------------
+    # 🧹 Select relevant columns from matches
+    # ---------------------------------------------------
+    match_cols = [
+        "matchid", "season", "city", "venue", "winner", "team1", "team2",
+        "toss_winner", "player_of_match", "date"
+    ]
+    matches = matches[[col for col in match_cols if col in matches.columns]]
 
-    # ✅ Handle season (ensure exists)
-    if 'season' not in matches.columns:
-        matches['season'] = None
+    # ---------------------------------------------------
+    # 🧽 Clean match-level data
+    # ---------------------------------------------------
+    matches["winner"] = matches["winner"].fillna("Unknown").astype(str).str.strip()
+    matches = matches[matches["winner"] != "Unknown"]
 
-    # ✅ Clean season format if exists
-    matches['season'] = matches['season'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+    for col in ["team1", "team2", "toss_winner"]:
+        matches[col] = matches[col].fillna("Unknown").astype(str).str.strip()
+        matches = matches[matches[col] != "Unknown"]
 
-    # ✅ Choose columns for merge dynamically
-    merge_cols = ['id', 'season', 'city', 'venue', 'winner', 'team1', 'team2', 'toss_winner', 'player_of_match']
-    available_cols = [c for c in merge_cols if c in matches.columns]
+    matches["venue"] = matches["venue"].fillna("Unknown").astype(str).str.strip()
+    matches = matches[matches["venue"] != "Unknown"]
 
-    # ✅ Perform merge
+    # Normalize season
+    matches["season"] = matches["season"].astype(str).str.extract(r"(\d{4})")[0]
+    matches["season"] = matches["season"].fillna("2008")
+    matches["season"] = matches["season"].replace({"708": "2008", "910": "2010"})
+
+    # ---------------------------------------------------
+    # 🏏 Merge with deliveries for completeness
+    # ---------------------------------------------------
+    print("🔗 Merging datasets (light join)...")
     merged = deliveries.merge(
-        matches[available_cols],
-        left_on='match_id',
-        right_on='id',
-        how='left'
+        matches,
+        on="matchid",
+        how="left",
+        suffixes=("", "_match")
     )
 
-    # ✅ Ensure season column exists in merged (fallback)
-    if 'season' not in merged.columns:
-        merged['season'] = matches['season'].iloc[0] if len(matches) > 0 else None
+    # ---------------------------------------------------
+    # 🧹 Final cleaning for merged data
+    # ---------------------------------------------------
+    merged["winner"] = merged["winner"].fillna("Unknown").astype(str)
+    merged = merged[merged["winner"] != "Unknown"]
 
-    # ✅ Normalize season codes (e.g., 200708 → 2008)
-    def fix_season(val):
-        val = str(val).strip()
-    # handle weird dual-year cases explicitly
-        replacements = {
-            "0708": "2008",
-            "708": "2008",      # safety for dropped leading zero
-            "0910": "2010",
-            "910": "2010",
-            "2021": "2021"
-        }
-        if val in replacements:
-            return replacements[val]
-        if len(val) > 4:
-            return val[-4:]
-        return val
+    # Convert season to str for correct plotting
+    merged["season"] = merged["season"].astype(str)
 
+    # Create a helper 'wins' column (1 per match, deduplicated later)
+    # Deduplicate by matchid before counting wins
+    match_level = merged.drop_duplicates(subset=["matchid"])
+    match_level["wins"] = 1
 
+    # ---------------------------------------------------
+    # 💾 Save cleaned dataset
+    # ---------------------------------------------------
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    match_level.to_csv(output_path, index=False)
 
-    merged['season'] = merged['season'].apply(fix_season)
-
-    # ✅ Drop duplicates & missing data
-    merged.drop_duplicates(inplace=True)
-    merged = merged.dropna(subset=['winner', 'team1', 'team2'], how='any')
-
-    # ✅ Save processed datasets
-    os.makedirs('data/processed', exist_ok=True)
-    matches.to_csv('data/processed/cleaned_matches.csv', index=False)
-    merged.to_csv('data/processed/cleaned_ipl.csv', index=False)
-
-    print(f"✅ Cleaned & merged successfully — {len(merged):,} rows saved to data/processed/cleaned_ipl.csv")
-    print(f"📅 Used date column: {date_col}")
-    print(f"🧹 Unique seasons: {sorted(merged['season'].dropna().unique())}")
-    return merged
-
+    print(f"✅ Cleaned successfully — {len(match_level):,} unique matches saved to {output_path}")
+    print(f"📅 Seasons available: {sorted(match_level['season'].dropna().unique().tolist())}")
+    print(f"🏆 Sample winners: {match_level['winner'].unique()[:5]}")
 
 if __name__ == "__main__":
     clean_data()
