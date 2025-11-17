@@ -1,0 +1,6 @@
+INSTAGRAM:
+  ACCESS_TOKEN: "your_instagram_access_token"
+  USER_ID: "your_user_id"
+SETTINGS:
+  SAVE_TO_DB: true
+  DB_PATH: "data/instagram.db"

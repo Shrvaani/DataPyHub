@@ -1,0 +1,11 @@
+pandas
+numpy
+requests
+pyyaml
+textblob
+plotly
+matplotlib
+wordcloud
+streamlit
+prophet
+sqlite3
