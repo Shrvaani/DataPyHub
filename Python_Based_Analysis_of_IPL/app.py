@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
+from src.data_cleaning import clean_data
 
 # ---------------------------------------------------
 # 🎯 APP CONFIG
@@ -19,8 +20,18 @@ MODEL_PATH = "models/ipl_predictor.pkl"
 ENCODERS_PATH = "models/encoders.pkl"
 
 if not os.path.exists(DATA_PATH):
-    st.error("Processed data not found. Please run `python -m src.data_cleaning` first.")
-    st.stop()
+    raw_matches = "data/raw/IPL_Matches_2008_2024.csv"
+    raw_deliveries = "data/raw/IPL_Ball_by_Ball_2008_2024.csv"
+    if os.path.exists(raw_matches) and os.path.exists(raw_deliveries):
+        with st.spinner("🔄 Processing data... This may take a moment."):
+            try:
+                clean_data()
+            except Exception as e:
+                st.error(f"❌ Error processing data: {str(e)}")
+                st.stop()
+    else:
+        st.error("Processed data not found. Please run `python -m src.data_cleaning` first.")
+        st.stop()
 
 df = pd.read_csv(DATA_PATH, low_memory=False)
 
