@@ -32,16 +32,27 @@ else:
 DATA_PATH = f"{base}data/processed/cleaned_ipl.csv"
 
 # Try multiple possible paths for model files
+# Get the directory where app.py is located
+app_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+
 possible_model_paths = [
     f"{base}models/ipl_predictor.pkl",
     "models/ipl_predictor.pkl",
-    "Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl"
+    "Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl",
+    os.path.join(app_dir, "models", "ipl_predictor.pkl"),
+    os.path.join(os.path.dirname(app_dir), "models", "ipl_predictor.pkl") if app_dir != os.getcwd() else None
 ]
 possible_encoder_paths = [
     f"{base}models/encoders.pkl",
     "models/encoders.pkl",
-    "Python_Based_Analysis_of_IPL/models/encoders.pkl"
+    "Python_Based_Analysis_of_IPL/models/encoders.pkl",
+    os.path.join(app_dir, "models", "encoders.pkl"),
+    os.path.join(os.path.dirname(app_dir), "models", "encoders.pkl") if app_dir != os.getcwd() else None
 ]
+
+# Remove None values
+possible_model_paths = [p for p in possible_model_paths if p]
+possible_encoder_paths = [p for p in possible_encoder_paths if p]
 
 MODEL_PATH = None
 ENCODERS_PATH = None
@@ -141,8 +152,10 @@ if MODEL_PATH and ENCODERS_PATH and os.path.exists(MODEL_PATH) and os.path.exist
         pred_winner = encoders["winner"].inverse_transform([pred_encoded])[0]
         st.success(f"🏆 Predicted Winner: {pred_winner}")
 else:
-    st.warning(f"⚠️ Model files not found at expected paths.")
-    st.caption(f"Checked paths: {', '.join(possible_model_paths + possible_encoder_paths)}")
+    st.warning(f"⚠️ Model files not found.")
+    st.caption(f"Current directory: {os.getcwd()}")
+    st.caption(f"Checked {len(possible_model_paths + possible_encoder_paths)} paths")
+    st.info("💡 **Note:** Model files must be committed to git to be available on Streamlit Cloud.")
     st.caption("The dashboard will work without the prediction feature.")
 
 # ---------------------------------------------------
