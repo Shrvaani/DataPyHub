@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 from src.visualization import (
     load_analytics_data,
     create_sentiment_chart
 )
+from src.analytics import run_analytics
 
 # ----------------------------------------------------
 # MUST be the first Streamlit command
@@ -19,6 +21,24 @@ st.set_page_config(
 # ----------------------------------------------------
 @st.cache_data
 def load_data():
+    analytics_path = "data/processed/instagram_analytics.csv"
+    
+    # If analytics file doesn't exist, try to generate it
+    if not os.path.exists(analytics_path):
+        raw_data_path = "data/raw/Instagram.csv"
+        if os.path.exists(raw_data_path):
+            with st.spinner("🔄 Generating analytics data... This may take a moment."):
+                try:
+                    run_analytics()
+                except Exception as e:
+                    st.error(f"❌ Error generating analytics: {str(e)}")
+                    st.stop()
+        else:
+            st.error(f"❌ Required data file not found at {raw_data_path}")
+            st.info("Please ensure your Instagram data CSV is placed at `data/raw/Instagram.csv`")
+            st.stop()
+    
+    # Now try to load the analytics data
     try:
         return load_analytics_data()
     except FileNotFoundError as e:
