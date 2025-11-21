@@ -21,7 +21,13 @@ if os.path.exists("data/raw/IPL_Matches_2008_2024.csv"):
 elif os.path.exists("Python_Based_Analysis_of_IPL/data/raw/IPL_Matches_2008_2024.csv"):
     base = "Python_Based_Analysis_of_IPL/"
 else:
-    base = ""
+    # Try to detect from model files
+    if os.path.exists("models/ipl_predictor.pkl"):
+        base = ""
+    elif os.path.exists("Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl"):
+        base = "Python_Based_Analysis_of_IPL/"
+    else:
+        base = ""
 
 DATA_PATH = f"{base}data/processed/cleaned_ipl.csv"
 MODEL_PATH = f"{base}models/ipl_predictor.pkl"
@@ -112,8 +118,9 @@ if os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
         pred_winner = encoders["winner"].inverse_transform([pred_encoded])[0]
         st.success(f"🏆 Predicted Winner: {pred_winner}")
 else:
-    st.info("ℹ️ Match prediction feature is not available. The model files are not present in the repository.")
-    st.caption("Note: This is expected if model files are not committed. The dashboard will work without predictions.")
+    st.warning(f"⚠️ Model files not found at expected paths.")
+    st.caption(f"Checked: {MODEL_PATH} and {ENCODERS_PATH}")
+    st.caption("The dashboard will work without the prediction feature.")
 
 # ---------------------------------------------------
 # 🎲 TOSS IMPACT ANALYSIS
