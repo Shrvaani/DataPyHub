@@ -21,26 +21,39 @@ st.set_page_config(
 # ----------------------------------------------------
 @st.cache_data
 def load_data():
-    analytics_path = "data/processed/instagram_analytics.csv"
+    # Check paths - handle both repo root and subfolder execution
+    if os.path.exists("data/raw/Instagram.csv"):
+        base = ""
+    elif os.path.exists("Python_Analyzing_Instagram_Reach/data/raw/Instagram.csv"):
+        base = "Python_Analyzing_Instagram_Reach/"
+    else:
+        st.error("❌ Required data file not found")
+        st.info("Please ensure your Instagram data CSV is at `data/raw/Instagram.csv`")
+        st.stop()
+    
+    analytics_path = f"{base}data/processed/instagram_analytics.csv"
     
     # If analytics file doesn't exist, try to generate it
     if not os.path.exists(analytics_path):
-        raw_data_path = "data/raw/Instagram.csv"
-        if os.path.exists(raw_data_path):
-            with st.spinner("🔄 Generating analytics data... This may take a moment."):
-                try:
-                    run_analytics()
-                except Exception as e:
-                    st.error(f"❌ Error generating analytics: {str(e)}")
-                    st.stop()
-        else:
-            st.error(f"❌ Required data file not found at {raw_data_path}")
-            st.info("Please ensure your Instagram data CSV is placed at `data/raw/Instagram.csv`")
-            st.stop()
+        raw_data_path = f"{base}data/raw/Instagram.csv"
+        original_cwd = os.getcwd()
+        with st.spinner("🔄 Generating analytics data... This may take a moment."):
+            try:
+                # Change to correct directory for analytics script
+                if base:
+                    os.chdir(base.rstrip("/"))
+                run_analytics()
+                if base:
+                    os.chdir(original_cwd)
+            except Exception as e:
+                if base:
+                    os.chdir(original_cwd)
+                st.error(f"❌ Error generating analytics: {str(e)}")
+                st.stop()
     
     # Now try to load the analytics data
     try:
-        return load_analytics_data()
+        return load_analytics_data(analytics_path)
     except FileNotFoundError as e:
         st.error(f"❌ {str(e)}")
         st.stop()
