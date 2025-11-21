@@ -30,8 +30,31 @@ else:
         base = ""
 
 DATA_PATH = f"{base}data/processed/cleaned_ipl.csv"
-MODEL_PATH = f"{base}models/ipl_predictor.pkl"
-ENCODERS_PATH = f"{base}models/encoders.pkl"
+
+# Try multiple possible paths for model files
+possible_model_paths = [
+    f"{base}models/ipl_predictor.pkl",
+    "models/ipl_predictor.pkl",
+    "Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl"
+]
+possible_encoder_paths = [
+    f"{base}models/encoders.pkl",
+    "models/encoders.pkl",
+    "Python_Based_Analysis_of_IPL/models/encoders.pkl"
+]
+
+MODEL_PATH = None
+ENCODERS_PATH = None
+
+for path in possible_model_paths:
+    if os.path.exists(path):
+        MODEL_PATH = path
+        break
+
+for path in possible_encoder_paths:
+    if os.path.exists(path):
+        ENCODERS_PATH = path
+        break
 
 if not os.path.exists(DATA_PATH):
     raw_matches = f"{base}data/raw/IPL_Matches_2008_2024.csv"
@@ -95,7 +118,7 @@ col3.metric("Unique Player of Match Winners", total_players)
 st.markdown("---")
 st.subheader("🎯 Predict Match Outcome")
 
-if os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
+if MODEL_PATH and ENCODERS_PATH and os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
     model = joblib.load(MODEL_PATH)
     encoders = joblib.load(ENCODERS_PATH)
 
@@ -119,7 +142,7 @@ if os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
         st.success(f"🏆 Predicted Winner: {pred_winner}")
 else:
     st.warning(f"⚠️ Model files not found at expected paths.")
-    st.caption(f"Checked: {MODEL_PATH} and {ENCODERS_PATH}")
+    st.caption(f"Checked paths: {', '.join(possible_model_paths + possible_encoder_paths)}")
     st.caption("The dashboard will work without the prediction feature.")
 
 # ---------------------------------------------------
