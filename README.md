@@ -1,15 +1,15 @@
-# 🌦 Weather Prediction using Python + ML
+# Weather Prediction using Python + ML
 
 A machine learning-powered weather prediction application that fetches live weather data and predicts temperature trends using a Random Forest Regressor model.
 
-## 📋 Features
+## Features
 
 - **Live Weather Data**: Fetches real-time weather data from OpenWeather API
 - **Temperature Prediction**: Uses ML model to predict temperature based on humidity, pressure, and wind speed
 - **Interactive Web App**: Built with Streamlit for easy-to-use interface
 - **Machine Learning Model**: Random Forest Regressor trained on weather data
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Python**: Core programming language
 - **scikit-learn**: Machine learning model (RandomForestRegressor)
@@ -20,7 +20,7 @@ A machine learning-powered weather prediction application that fetches live weat
 - **joblib**: Model serialization
 - **plotly**: Data visualization
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Python_Based_Weather_Prediction/
@@ -40,7 +40,7 @@ Python_Based_Weather_Prediction/
     └── predict.py        # Make temperature predictions
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -101,14 +101,14 @@ Python_Based_Weather_Prediction/
    - Display current weather conditions
    - Predict temperature using the ML model
 
-## 🔧 Model Details
+## Model Details
 
 - **Algorithm**: Random Forest Regressor
 - **Features**: Humidity, Pressure, Wind Speed
 - **Target**: Temperature (°C)
 - **Evaluation Metrics**: MAE, RMSE, R² Score
 
-## 📝 Development
+## Development
 
 ### Training the Model
 
@@ -132,19 +132,19 @@ Use `src/preprocess.py` to generate synthetic training data:
 - Creates weather datasets with realistic correlations
 - Saves processed data to `data/processed/`
 
-## 🔐 Environment Variables
+## Environment Variables
 
 Create a `.env` file in the `Python_Based_Weather_Prediction` directory with:
 ```
 API_KEY=your_openweather_api_key
 ```
 
-## 📊 Data Sources
+## Data Sources
 
 - **Live Weather Data**: OpenWeather API
 - **Training Data**: Synthetic data generated for model training
 
-## 🤝 Contributing
+## Contributing
 
 Feel free to submit issues, fork the repository, and create pull requests for any improvements.
 
