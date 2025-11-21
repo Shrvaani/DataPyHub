@@ -112,7 +112,8 @@ if os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
         pred_winner = encoders["winner"].inverse_transform([pred_encoded])[0]
         st.success(f"🏆 Predicted Winner: {pred_winner}")
 else:
-    st.warning("Model or encoders not found. Run `python -m src.match_predictor` to train them.")
+    st.info("ℹ️ Match prediction feature is not available. The model files are not present in the repository.")
+    st.caption("Note: This is expected if model files are not committed. The dashboard will work without predictions.")
 
 # ---------------------------------------------------
 # 🎲 TOSS IMPACT ANALYSIS
