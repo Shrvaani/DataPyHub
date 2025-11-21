@@ -15,18 +15,37 @@ st.markdown("A data-driven dashboard for IPL match insights, trends, and predict
 # ---------------------------------------------------
 # 📂 LOAD DATA
 # ---------------------------------------------------
-DATA_PATH = "data/processed/cleaned_ipl.csv"
-MODEL_PATH = "models/ipl_predictor.pkl"
-ENCODERS_PATH = "models/encoders.pkl"
+# Check paths - handle both repo root and subfolder execution
+if os.path.exists("data/raw/IPL_Matches_2008_2024.csv"):
+    base = ""
+elif os.path.exists("Python_Based_Analysis_of_IPL/data/raw/IPL_Matches_2008_2024.csv"):
+    base = "Python_Based_Analysis_of_IPL/"
+else:
+    base = ""
+
+DATA_PATH = f"{base}data/processed/cleaned_ipl.csv"
+MODEL_PATH = f"{base}models/ipl_predictor.pkl"
+ENCODERS_PATH = f"{base}models/encoders.pkl"
 
 if not os.path.exists(DATA_PATH):
-    raw_matches = "data/raw/IPL_Matches_2008_2024.csv"
-    raw_deliveries = "data/raw/IPL_Ball_by_Ball_2008_2024.csv"
+    raw_matches = f"{base}data/raw/IPL_Matches_2008_2024.csv"
+    raw_deliveries = f"{base}data/raw/IPL_Ball_by_Ball_2008_2024.csv"
     if os.path.exists(raw_matches) and os.path.exists(raw_deliveries):
+        original_cwd = os.getcwd()
         with st.spinner("🔄 Processing data... This may take a moment."):
             try:
+                if base:
+                    os.chdir(base.rstrip("/"))
                 clean_data()
+                if base:
+                    os.chdir(original_cwd)
+                # Verify file was created
+                if not os.path.exists(DATA_PATH):
+                    st.error("❌ Data processing completed but file not found.")
+                    st.stop()
             except Exception as e:
+                if base:
+                    os.chdir(original_cwd)
                 st.error(f"❌ Error processing data: {str(e)}")
                 st.stop()
     else:
