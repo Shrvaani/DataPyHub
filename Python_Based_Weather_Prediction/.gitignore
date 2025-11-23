@@ -2,9 +2,6 @@
 __pycache__/
 *.pyc
 
-# Model artifacts
-model.pkl
-
 # Data files
 data/
 !data/.gitkeep  # keep the empty folder in repo
