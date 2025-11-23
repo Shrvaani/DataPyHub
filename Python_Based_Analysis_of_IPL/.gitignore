@@ -1,8 +1,6 @@
-# --- Allow model files to be committed ---
-# (Removed "models/" so Git will track your .pkl files)
-
-# --- Ignore processed data ---
-data/processed/
+# Ignore everything inside processed EXCEPT cleaned_ipl.csv
+data/processed/*
+!data/processed/cleaned_ipl.csv
 
 # --- Python cache ---
 __pycache__/
