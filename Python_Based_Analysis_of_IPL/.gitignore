@@ -1,6 +1,12 @@
-models/
-!models/*.pkl
+# --- Allow model files to be committed ---
+# (Removed "models/" so Git will track your .pkl files)
+
+# --- Ignore processed data ---
 data/processed/
+
+# --- Python cache ---
 __pycache__/
 *.pyc
+
+# --- macOS metadata ---
 .DS_Store

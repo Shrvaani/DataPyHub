@@ -1,87 +1,43 @@
 import pandas as pd
 import os
+import joblib
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
 
-def clean_data():
-    # File paths
-    matches_path = "data/raw/IPL_Matches_2008_2024.csv"
-    deliveries_path = "data/raw/IPL_Ball_by_Ball_2008_2024.csv"
-    output_path = "data/processed/cleaned_ipl.csv"
+DATA_PATH = "data/processed/cleaned_ipl.csv"
+MODEL_DIR = "models"
+MODEL_PATH = f"{MODEL_DIR}/ipl_predictor.pkl"
+ENCODERS_PATH = f"{MODEL_DIR}/encoders.pkl"
 
-    # ---------------------------------------------------
-    # 🧾 Load datasets
-    # ---------------------------------------------------
-    print("📥 Loading datasets...")
-    matches = pd.read_csv(matches_path, low_memory=False)
-    deliveries = pd.read_csv(deliveries_path, low_memory=False)
+def train_model():
+    if not os.path.exists(DATA_PATH):
+        raise FileNotFoundError("Run `python -m src.data_cleaning` first.")
 
-    # ---------------------------------------------------
-    # 🔧 Standardize column names
-    # ---------------------------------------------------
-    matches.columns = matches.columns.str.strip().str.lower().str.replace(" ", "_")
-    deliveries.columns = deliveries.columns.str.strip().str.lower().str.replace(" ", "_")
+    df = pd.read_csv(DATA_PATH)
 
-    if "matchid" not in matches.columns:
-        matches.rename(columns={"id": "matchid"}, inplace=True)
+    features = ["toss_winner", "venue", "team1", "team2"]
+    target = "winner"
 
-    if "matchid" not in deliveries.columns:
-        raise ValueError("⚠️ Missing 'matchId' column in deliveries file.")
+    # encoders
+    encoders = {}
+    for col in features + [target]:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col].astype(str))
+        encoders[col] = le
 
-    # ---------------------------------------------------
-    # 🧹 Select relevant columns
-    # ---------------------------------------------------
-    match_cols = [
-        "matchid", "season", "city", "venue", "winner",
-        "team1", "team2", "toss_winner", "player_of_match", "date"
-    ]
-    matches = matches[[col for col in match_cols if col in matches.columns]]
+    X = df[features]
+    y = df[target]
 
-    # ---------------------------------------------------
-    # 🧽 Clean match-level data
-    # ---------------------------------------------------
-    matches["winner"] = matches["winner"].fillna("Unknown").astype(str).str.strip()
-    matches = matches[matches["winner"] != "Unknown"]
+    model = RandomForestClassifier(n_estimators=200, random_state=42)
+    model.fit(X, y)
 
-    for col in ["team1", "team2", "toss_winner"]:
-        matches[col] = matches[col].fillna("Unknown").astype(str).str.strip()
-        matches = matches[matches[col] != "Unknown"]
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    joblib.dump(model, MODEL_PATH)
+    joblib.dump(encoders, ENCODERS_PATH)
 
-    matches["venue"] = matches["venue"].fillna("Unknown").astype(str).str.strip()
-    matches = matches[matches["venue"] != "Unknown"]
-
-    # Normalize season format
-    matches["season"] = matches["season"].astype(str).str.extract(r"(\d{4})")[0]
-    matches["season"] = matches["season"].fillna("2008")
-    matches["season"] = matches["season"].replace({"708": "2008", "910": "2010"})
-    matches["season"] = matches["season"].astype(str)
-
-    # ---------------------------------------------------
-    # 🏏 Merge with deliveries for completeness
-    # ---------------------------------------------------
-    print("🔗 Merging datasets...")
-    merged = deliveries.merge(matches, on="matchid", how="left", suffixes=("", "_match"))
-
-    # ---------------------------------------------------
-    # 🧹 Final cleaning
-    # ---------------------------------------------------
-    merged["winner"] = merged["winner"].fillna("Unknown").astype(str)
-    merged = merged[merged["winner"] != "Unknown"]
-
-    # Deduplicate at match level
-    match_level = merged.drop_duplicates(subset=["matchid"]).copy()
-
-    # Add a wins column (count one per match)
-    match_level["wins"] = 1
-
-    # ---------------------------------------------------
-    # 💾 Save cleaned dataset
-    # ---------------------------------------------------
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    match_level.to_csv(output_path, index=False)
-
-    print(f"✅ Cleaned successfully — {len(match_level):,} unique matches saved to {output_path}")
-    print(f"📅 Seasons available: {sorted(match_level['season'].dropna().unique().tolist())}")
-    print(f"🏆 Sample winners: {match_level['winner'].unique()[:5]}")
-    print("🧮 'wins' column created for team aggregation plots ✅")
+    print("✅ Model training complete!")
+    print(f"📦 Saved model: {MODEL_PATH}")
+    print(f"📦 Saved encoders: {ENCODERS_PATH}")
 
 if __name__ == "__main__":
-    clean_data()
+    train_model()

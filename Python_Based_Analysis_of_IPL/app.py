@@ -1,189 +1,201 @@
+import os
 import streamlit as st
 import pandas as pd
 import joblib
-import os
-from src.data_cleaning import clean_data
+
+# optional: import cleaning routine (used if raw data exists but processed does not)
+try:
+    from src.data_cleaning import clean_data
+except Exception:
+    clean_data = None
 
 # ---------------------------------------------------
-# 🎯 APP CONFIG
+# 🎯 APP CONFIG (MUST be first Streamlit command)
 # ---------------------------------------------------
 st.set_page_config(page_title="🏏 IPL Analytics Dashboard (2008–2024)", layout="wide")
 
+# ---------------------------------------------------
+# 🧾 Header
+# ---------------------------------------------------
 st.title("🏏 IPL Analytics Dashboard (2008–2024)")
-st.markdown("A data-driven dashboard for IPL match insights, trends, and predictive analytics using machine learning.")
+st.markdown(
+    "A data-driven dashboard for IPL match insights, trends, and predictive analytics using machine learning."
+)
 
 # ---------------------------------------------------
-# 📂 LOAD DATA
+# 🔍 Paths (robust for local & deployment when this folder is the app root)
 # ---------------------------------------------------
-# Check paths - handle both repo root and subfolder execution
-if os.path.exists("data/raw/IPL_Matches_2008_2024.csv"):
-    base = ""
-elif os.path.exists("Python_Based_Analysis_of_IPL/data/raw/IPL_Matches_2008_2024.csv"):
-    base = "Python_Based_Analysis_of_IPL/"
-else:
-    # Try to detect from model files
-    if os.path.exists("models/ipl_predictor.pkl"):
-        base = ""
-    elif os.path.exists("Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl"):
-        base = "Python_Based_Analysis_of_IPL/"
-    else:
-        base = ""
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DATA_PATH = f"{base}data/processed/cleaned_ipl.csv"
+DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "cleaned_ipl.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "ipl_predictor.pkl")
+ENCODERS_PATH = os.path.join(BASE_DIR, "models", "encoders.pkl")
 
-# Try multiple possible paths for model files
-# Get the directory where app.py is located
-app_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+RAW_MATCHES = os.path.join(BASE_DIR, "data", "raw", "IPL_Matches_2008_2024.csv")
+RAW_BALLS = os.path.join(BASE_DIR, "data", "raw", "IPL_Ball_by_Ball_2008_2024.csv")
 
-possible_model_paths = [
-    f"{base}models/ipl_predictor.pkl",
-    "models/ipl_predictor.pkl",
-    "Python_Based_Analysis_of_IPL/models/ipl_predictor.pkl",
-    os.path.join(app_dir, "models", "ipl_predictor.pkl"),
-    os.path.join(os.path.dirname(app_dir), "models", "ipl_predictor.pkl") if app_dir != os.getcwd() else None
-]
-possible_encoder_paths = [
-    f"{base}models/encoders.pkl",
-    "models/encoders.pkl",
-    "Python_Based_Analysis_of_IPL/models/encoders.pkl",
-    os.path.join(app_dir, "models", "encoders.pkl"),
-    os.path.join(os.path.dirname(app_dir), "models", "encoders.pkl") if app_dir != os.getcwd() else None
-]
-
-# Remove None values
-possible_model_paths = [p for p in possible_model_paths if p]
-possible_encoder_paths = [p for p in possible_encoder_paths if p]
-
-MODEL_PATH = None
-ENCODERS_PATH = None
-
-for path in possible_model_paths:
-    if os.path.exists(path):
-        MODEL_PATH = path
-        break
-
-for path in possible_encoder_paths:
-    if os.path.exists(path):
-        ENCODERS_PATH = path
-        break
-
+# ---------------------------------------------------
+# 🧹 Ensure data exists (auto-process if raw available & cleaning routine present)
+# ---------------------------------------------------
 if not os.path.exists(DATA_PATH):
-    raw_matches = f"{base}data/raw/IPL_Matches_2008_2024.csv"
-    raw_deliveries = f"{base}data/raw/IPL_Ball_by_Ball_2008_2024.csv"
-    if os.path.exists(raw_matches) and os.path.exists(raw_deliveries):
-        original_cwd = os.getcwd()
-        with st.spinner("🔄 Processing data... This may take a moment."):
+    if clean_data and os.path.exists(RAW_MATCHES) and os.path.exists(RAW_BALLS):
+        with st.spinner("🔄 Processing raw IPL data..."):
             try:
-                if base:
-                    os.chdir(base.rstrip("/"))
                 clean_data()
-                if base:
-                    os.chdir(original_cwd)
-                # Verify file was created
-                if not os.path.exists(DATA_PATH):
-                    st.error("❌ Data processing completed but file not found.")
-                    st.stop()
             except Exception as e:
-                if base:
-                    os.chdir(original_cwd)
-                st.error(f"❌ Error processing data: {str(e)}")
+                st.error(f"❌ Data processing error: {e}")
                 st.stop()
-    else:
-        st.error("Processed data not found. Please run `python -m src.data_cleaning` first.")
+
+    if not os.path.exists(DATA_PATH):
+        st.error(
+            "Processed data not found. Place `data/processed/cleaned_ipl.csv` in the project or run the cleaning script locally."
+        )
         st.stop()
 
-df = pd.read_csv(DATA_PATH, low_memory=False)
+# ---------------------------------------------------
+# 📂 Load cleaned data
+# ---------------------------------------------------
+try:
+    df = pd.read_csv(DATA_PATH, low_memory=False)
+except Exception as e:
+    st.error(f"Failed to load cleaned data: {e}")
+    st.stop()
 
-# Ensure ‘wins’ column exists and is numeric
+# Ensure expected columns exist and types are sane
 if "wins" not in df.columns:
     df["wins"] = 1
 else:
     df["wins"] = pd.to_numeric(df["wins"], errors="coerce").fillna(1).astype(int)
 
+# canonicalize some columns if present
+for c in ["team1", "team2", "season", "matchid", "toss_winner", "venue", "winner"]:
+    if c in df.columns:
+        df[c] = df[c].astype(str)
+
 # ---------------------------------------------------
-# 🧭 SIDEBAR FILTERS
+# 🧭 Sidebar filters
 # ---------------------------------------------------
 st.sidebar.header("Filters")
-selected_team = st.sidebar.selectbox("Select Team", sorted(df["team1"].dropna().unique()))
-selected_season = st.sidebar.selectbox("Select Season", sorted(df["season"].dropna().unique()))
+teams = sorted(df["team1"].dropna().unique()) if "team1" in df else []
+seasons = sorted(df["season"].dropna().unique()) if "season" in df else []
 
-filtered_df = df[((df["team1"] == selected_team) | (df["team2"] == selected_team)) & (df["season"] == selected_season)]
+selected_team = st.sidebar.selectbox("Select Team", teams) if teams else None
+selected_season = st.sidebar.selectbox("Select Season", seasons) if seasons else None
+
+filtered_df = df
+if selected_team:
+    filtered_df = filtered_df[
+        (filtered_df["team1"] == selected_team) | (filtered_df["team2"] == selected_team)
+    ]
+if selected_season:
+    filtered_df = filtered_df[filtered_df["season"] == selected_season]
 
 # ---------------------------------------------------
-# 🧾 BASIC INSIGHTS
+# 📊 Basic insights
 # ---------------------------------------------------
 st.subheader("📊 Basic Insights")
-
-total_matches = len(df["matchid"].unique())
-unique_teams = df["team1"].nunique()
-total_players = df["player_of_match"].nunique() if "player_of_match" in df.columns else "N/A"
+total_matches = df["matchid"].nunique() if "matchid" in df else len(df)
+unique_teams = df["team1"].nunique() if "team1" in df else 0
+total_players = df["player_of_match"].nunique() if "player_of_match" in df else 0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Matches", total_matches)
 col2.metric("Teams Participated", unique_teams)
 col3.metric("Unique Player of Match Winners", total_players)
 
+# short summary table for the filtered selection
+st.markdown("---")
+st.subheader("Filtered Match Sample")
+st.dataframe(filtered_df.head(10))
+
 # ---------------------------------------------------
-# 🎯 MATCH PREDICTOR (moved here)
+# 🤖 Match predictor
 # ---------------------------------------------------
 st.markdown("---")
 st.subheader("🎯 Predict Match Outcome")
 
-if MODEL_PATH and ENCODERS_PATH and os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH):
-    model = joblib.load(MODEL_PATH)
-    encoders = joblib.load(ENCODERS_PATH)
+model_available = os.path.exists(MODEL_PATH) and os.path.exists(ENCODERS_PATH)
 
-    team1 = st.selectbox("Team 1", sorted(df["team1"].dropna().unique()))
-    team2 = st.selectbox("Team 2", sorted(df["team2"].dropna().unique()))
-    toss_winner = st.selectbox("Toss Winner", sorted(df["toss_winner"].dropna().unique()))
-    venue = st.selectbox("Venue", sorted(df["venue"].dropna().unique()))
+if model_available:
+    try:
+        model = joblib.load(MODEL_PATH)
+        encoders = joblib.load(ENCODERS_PATH)
+    except Exception as e:
+        st.error(f"Failed to load model/encoders: {e}")
+        model_available = False
+
+if model_available:
+    # prepare UI inputs using dataset values if possible
+    team1_val = st.selectbox("Team 1", sorted(df["team1"].unique()))
+    team2_val = st.selectbox("Team 2", sorted(df["team2"].unique()))
+    toss_val = st.selectbox("Toss Winner", sorted(df["toss_winner"].unique()))
+    venue_val = st.selectbox("Venue", sorted(df["venue"].unique()))
 
     if st.button("Predict Winner"):
-        input_df = pd.DataFrame([[toss_winner, venue, team1, team2]],
-                                columns=["toss_winner", "venue", "team1", "team2"])
+        input_df = pd.DataFrame(
+            [[toss_val, venue_val, team1_val, team2_val]],
+            columns=["toss_winner", "venue", "team1", "team2"],
+        )
 
+        # encode using saved label encoders; unseen labels -> -1
+        encoded_row = {}
         for col in input_df.columns:
+            if col not in encoders:
+                st.error(f"Encoder for '{col}' not found in encoders.pkl")
+                st.stop()
             le = encoders[col]
-            if input_df[col][0] not in le.classes_:
-                st.warning(f"⚠️ '{input_df[col][0]}' not found in training data. Prediction may be less accurate.")
-            input_df[col] = input_df[col].map(lambda x: le.transform([x])[0] if x in le.classes_ else -1)
+            val = input_df.at[0, col]
+            if val in le.classes_:
+                encoded_row[col] = int(le.transform([val])[0])
+            else:
+                # warn but allow prediction (maps to -1)
+                st.warning(f"'{val}' not found in training labels for {col}. Encoding as -1.")
+                encoded_row[col] = -1
 
-        pred_encoded = model.predict(input_df)[0]
-        pred_winner = encoders["winner"].inverse_transform([pred_encoded])[0]
-        st.success(f"🏆 Predicted Winner: {pred_winner}")
+        X = pd.DataFrame([encoded_row])
+        try:
+            pred_encoded = model.predict(X)[0]
+            if "winner" in encoders:
+                pred_winner = encoders["winner"].inverse_transform([pred_encoded])[0]
+            else:
+                pred_winner = str(pred_encoded)
+            st.success(f"🏆 Predicted Winner: **{pred_winner}**")
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
 else:
-    st.warning(f"⚠️ Model files not found.")
-    st.caption(f"Current directory: {os.getcwd()}")
-    st.caption(f"Checked {len(possible_model_paths + possible_encoder_paths)} paths")
-    st.info("💡 **Note:** Model files must be committed to git to be available on Streamlit Cloud.")
-    st.caption("The dashboard will work without the prediction feature.")
+    st.info(
+        "Prediction feature disabled — model files not found. "
+        "Place the trained model files in the `models/` folder (ipl_predictor.pkl, encoders.pkl)."
+    )
 
 # ---------------------------------------------------
-# 🎲 TOSS IMPACT ANALYSIS
+# 🎲 Toss impact analysis
 # ---------------------------------------------------
 st.markdown("---")
 st.subheader("🎲 Toss Impact Analysis")
-
-unique_matches = df.drop_duplicates(subset=["matchid"])
-toss_wins = unique_matches[unique_matches["toss_winner"] == unique_matches["winner"]].shape[0]
-total_matches = unique_matches.shape[0]
-toss_win_percent = (toss_wins / total_matches) * 100 if total_matches else 0
-
-st.metric(label="Matches where Toss Winner Also Won", value=f"{toss_win_percent:.2f}%")
+if "matchid" in df and "toss_winner" in df and "winner" in df:
+    unique_matches = df.drop_duplicates(subset=["matchid"])
+    toss_wins = unique_matches[unique_matches["toss_winner"] == unique_matches["winner"]].shape[0]
+    total_unique = unique_matches.shape[0] or 1
+    toss_win_percent = (toss_wins / total_unique) * 100
+    st.metric("Matches where Toss Winner Also Won", f"{toss_win_percent:.2f}%")
+else:
+    st.warning("Toss/winner/matchid data not available to compute toss impact.")
 
 # ---------------------------------------------------
-# 🏅 TOP PLAYERS
+# 🏅 Top players
 # ---------------------------------------------------
+st.markdown("---")
 if "player_of_match" in df.columns:
-    st.subheader("🏅 Top Players by Player of the Match Awards")
+    st.subheader("🏅 Top Players by 'Player of the Match' Awards")
     top_players = df["player_of_match"].value_counts().head(10).reset_index()
     top_players.columns = ["Player", "Awards"]
     st.dataframe(top_players)
 else:
-    st.warning("`player_of_match` column not found in dataset.")
+    st.info("`player_of_match` column not found in dataset.")
 
 # ---------------------------------------------------
-# 🧾 FOOTER
+# 🧾 Footer
 # ---------------------------------------------------
 st.markdown("---")
-st.caption("Developed by Shrvaani • DataPyHub | IPL Analytics Dashboard powered by Streamlit & Scikit-learn.")
+st.caption("Developed by Shrvaani • DataPyHub | IPL Analytics Dashboard • Powered by Streamlit & Scikit-learn")
